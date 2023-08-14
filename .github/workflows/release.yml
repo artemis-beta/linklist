@@ -1,0 +1,65 @@
+name: Linklist Release
+on:
+  push:
+    tags:
+      - "v*"
+permissions:
+  contents: write
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  create-release:
+    name: Create Release (${{ matrix.os }})
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get Previous tag
+        id: previoustag
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+      - name: Set Output Directory
+        uses: mathiasvr/command-output@v1
+        id: outdir_name
+        with:
+          run: echo $GITHUB_REPOSITORY | cut -d '/' -f 2 | cut --complement -f1 -d '-' | xargs
+      - name: Publish PDF Document
+        uses: shrink/actions-document-publish@v1
+        id: publish-document
+        with:
+          sources: 'README.md'
+      - name: Set Version Suffix
+        uses: mathiasvr/command-output@v1
+        id: outver
+        with:
+          run: |
+            VERSION="${{ steps.previoustag.outputs.tag }}"
+            VERSION_STR=$(${VERSION//./_} | xargs)
+            echo $VERSION_${{ matrix.os }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+      - name: Create Package
+        run: |
+          sudo apt install zip -y
+          DIR_NAME=$(echo "${{ steps.outdir_name.outputs.stdout }}" | xargs)_$(echo "${{ steps.outver.outputs.stdout }}" | xargs)
+          DIR_NAME=$(echo $DIR_NAME | xargs)
+          cp ${{ steps.publish-document.outputs.pdf }} $DIR_NAME/README.pdf
+          cp target/release/linklist $DIR_NAME
+          zip -r $DIR_NAME.zip $DIR_NAME
+          ls *.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          name: ${{ github.repository }} Release ${{ steps.previoustag.outputs.tag }}
+          tag_name: ${{ steps.previoustag.outputs.tag }}
+          files: |
+            *.zip
