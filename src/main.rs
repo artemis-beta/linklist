@@ -13,7 +13,6 @@
 
 use reqwest;
 use clap::Parser;
-use regex::Regex;
 use colored::Colorize;
 use std::process;
 use itertools::Itertools;
@@ -75,8 +74,6 @@ fn main() {
         process::exit(1);
     }
 
-    let re_domain = Regex::new(r"(https*://[\w\-\.\d]+)/*").unwrap();
-
     let mut links: Vec::<String> = Vec::<String>::new();
 
     if cli.file_type.is_none() || cli.file_type.as_ref().unwrap() == "all" {
@@ -102,7 +99,7 @@ fn main() {
     let domain_search = parsing::get_full_domain(&domain_arg);
 
     for link in uniq_links {
-        let domain = if !domain_search.ends_with("/") && !link.starts_with("/") {domain_search.to_string() + "/"} else {domain_search[0].to_string()};
+        let domain = if !domain_search.ends_with("/") && !link.starts_with("/") {domain_search.to_string() + "/"} else {domain_search.to_string()};
         let print_link = format!("{}{}", if cli.path {""} else {&domain}, link);
         if cli.color {
             if link.ends_with("/") {

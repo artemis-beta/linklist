@@ -32,7 +32,7 @@ pub fn get_full_domain(url: &String) -> String {
         process::exit(1);
     }
 
-    domain_search[0]
+    domain_search[0].clone()
 }
 
 
