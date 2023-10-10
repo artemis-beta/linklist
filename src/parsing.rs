@@ -10,7 +10,7 @@ pub fn get_domain(url: &String) -> String {
         Err(_) => panic!("Unable to parse URL")
     };
     match parsed_url.domain() {
-        Some(p) => p.to_string(),
+        Some(p) => format!("{}://{}",  parsed_url.scheme(), p).to_string(),
         None => {
             return match parsed_url.host_str() {
                 Some(v) => {
@@ -20,7 +20,7 @@ pub fn get_domain(url: &String) -> String {
                     };
                     format!("{}://{}{}", parsed_url.scheme(), v.to_string(), port)
                 }
-                None => panic!("Failed to retriev domain")
+                None => panic!("Failed to retrieve domain")
             }
         }
     }
@@ -44,8 +44,8 @@ pub fn get_base_url(url: &String) -> String {
 }
 
 
-/// Parse the Web page HTML for internal page links
-pub fn get_page_links(page_content: &String, domain: &String) -> Vec<String> {
+/// Parse the Web page HTML for file links
+pub fn get_file_links(page_content: &String, domain: &String) -> Vec<String> {
     let mut links: Vec<String> = Vec::<String>::new();
 
     let re_href_file = match Regex::new(r#"href=["'](/*[\w\d_/\-]+\.\w+*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#) {
@@ -93,8 +93,8 @@ pub fn get_page_links(page_content: &String, domain: &String) -> Vec<String> {
 }
 
 
-/// Parse the Web page HTML for internal file links
-pub fn get_file_links(page_content: &String, domain: &String) -> Vec<String> {
+/// Parse the Web page HTML for internal page links
+pub fn get_page_links(page_content: &String, domain: &String) -> Vec<String> {
     let mut links: Vec<String> = Vec::<String>::new();
 
     let re_href_internal = match Regex::new(r#"href=["'](/*[\w\d_/\-]+/*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#) {
@@ -139,4 +139,59 @@ pub fn get_file_links(page_content: &String, domain: &String) -> Vec<String> {
         links.append(&mut href_internal_file_abs);
     
     links
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::env;
+    use std::fs;
+    use std::path::PathBuf;
+
+    fn load_html_file_as_str() -> String {
+        let mut resource_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        resource_dir.push("resources/demo_site.html");
+
+        match fs::read_to_string(resource_dir) {
+            Ok(s) => s,
+            Err(_) => panic!("Failed to load file data")
+        }
+    }
+
+    #[test]
+    fn test_parse_page_links() -> () {
+        let dummy_domain = "http://127.0.0.1:5500".to_string();
+        assert_eq!(get_page_links(&load_html_file_as_str(), &dummy_domain), vec!["some_other_page", "/another_page", "/yet_another_page/"]);
+    }
+
+    #[test]
+    fn test_parse_file_links() -> () {
+        let dummy_domain = "http://127.0.0.1:5500".to_string();
+        assert_eq!(get_file_links(&load_html_file_as_str(), &dummy_domain), vec!["/a_linked_file.html", "file_link.html"]);
+    }
+
+    #[test]
+    fn test_get_base_url_normal() -> () {
+        let dummy_url = "http://www.not_a_real_place.com/subdirectory/a_file.html".to_string();
+        assert_eq!(get_base_url(&dummy_url), "http://www.not_a_real_place.com/subdirectory/");
+    }
+
+    #[test]
+    fn test_get_base_url_ip_port() -> () {
+        let dummy_url = "http://127.0.0.1:5050/subdirectory/a_file.html".to_string();
+        assert_eq!(get_base_url(&dummy_url), "http://127.0.0.1:5050/subdirectory/");
+    }
+
+    #[test]
+    fn test_get_domain_ip_port() -> () {
+        let dummy_url = "http://127.0.0.1:5050/subdirectory/a_file.html".to_string();
+        assert_eq!(get_domain(&dummy_url), "http://127.0.0.1:5050");
+    }
+
+    #[test]
+    fn test_get_domain_normal() -> () {
+        let dummy_url = "http://www.not_a_real_place.com/subdirectory/a_file.html".to_string();
+        assert_eq!(get_domain(&dummy_url), "http://www.not_a_real_place.com");
+    }
 }
