@@ -1,38 +1,46 @@
 use std::process;
 use colored::Colorize;
 use regex::Regex;
+use url::Url;
 
 /// Retrieves the domain part of the user provided URL
-pub fn get_full_domain(url: &String) -> String {
-    let re_domain = match Regex::new(r"(https*://[\w\-\.\d]+)/*")  {
-        Ok(val) => val,
-        Err(_) => {
-            println!("{}", "Internal Error: Failed to parse regex string".red());
-            process::exit(1);
-        }
+pub fn get_domain(url: &String) -> String {
+    let parsed_url = match Url::parse(url) {
+        Ok(p) => p,
+        Err(_) => panic!("Unable to parse URL")
     };
-
-    let domain_search: Vec<String> = re_domain
-    .captures_iter(&url)
-    .filter_map(|cap| {
-        let path = match cap.get(1) {
-            Some(p) => p,
-            None => {
-                println!("{}", "Failed to retrieve domain from provided URL".red().bold());
-                process::exit(1);
+    match parsed_url.domain() {
+        Some(p) => p.to_string(),
+        None => {
+            return match parsed_url.host_str() {
+                Some(v) => {
+                    let port = match parsed_url.port() {
+                        Some(k) => format!(":{}",  k).to_string(),
+                        None => "".to_string()
+                    };
+                    format!("{}://{}{}", parsed_url.scheme(), v.to_string(), port)
+                }
+                None => panic!("Failed to retriev domain")
             }
-        };
-        Some(path.as_str())
-    })
-    .map(|m| m.to_string())
-    .collect::<Vec<_>>();
-
-    if domain_search.len() < 1 {
-        println!("{}", "Failed to retrieve domain from provided URL".red().bold());
-        process::exit(1);
+        }
     }
+}
 
-    domain_search[0].clone()
+pub fn get_base_url(url: &String) -> String {
+    let parsed_url = match Url::parse(url) {
+        Ok(p) => p,
+        Err(_) => panic!("Unable to parse URL")
+    };
+    let path_segments: Vec<&str> = parsed_url.path().split("/").collect::<Vec<&str>>();
+    match path_segments.last(){
+        Some(p) => {
+            if p.contains(".") {
+                return parsed_url.as_str().replace(p, "");
+            }
+            return url.clone();
+        },
+        None => url.clone()
+    }
 }
 
 
