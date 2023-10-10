@@ -76,13 +76,23 @@ fn main() {
 
     let mut links: Vec::<String> = Vec::<String>::new();
 
+    let domain_search = parsing::get_domain(&domain_arg);
+    let mut base_url = parsing::get_base_url(&domain_arg);
+    
+    if base_url.ends_with("/") {
+        match base_url.pop() {
+            Some(_) => (),
+            None => ()
+        };
+    }
+
     if cli.file_type.is_none() || cli.file_type.as_ref().unwrap() == "all" {
-        let page_links: Vec<String> = parsing::get_page_links(&response_text, &domain_arg);
+        let page_links: Vec<String> = parsing::get_page_links(&response_text, &domain_search);
         links.extend(page_links);
     }
 
     if cli.file_type.is_some() {
-        let file_links: Vec<String> = parsing::get_file_links(&response_text, &domain_arg);
+        let file_links: Vec<String> = parsing::get_file_links(&response_text, &domain_search);
         links.extend(file_links);
     }
 
@@ -96,11 +106,13 @@ fn main() {
         process::exit(1);
     }
 
-    let domain_search = parsing::get_full_domain(&domain_arg);
-
     for link in uniq_links {
-        let domain = if !domain_search.ends_with("/") && !link.starts_with("/") {domain_search.to_string() + "/"} else {domain_search.to_string()};
-        let print_link = format!("{}{}", if cli.path {""} else {&domain}, link);
+        let print_link = format!(
+            "{}{}{}",
+            if cli.path {""} else {&base_url},
+            if link.starts_with("/") {""} else {"/"},
+            link
+        );
         if cli.color {
             if link.ends_with("/") {
                 println!("{}", print_link.blue().bold());
