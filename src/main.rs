@@ -32,6 +32,10 @@ struct CommandLineInterface {
     #[arg(short, long, help="Show as relative paths instead of full URL")]
     path: bool,
 
+    /// Provide server credentials
+    #[arg(short, long, help="Provide user argument to curl in form 'username:password'")]
+    user: Option<String>,
+
     /// Show file links in addition to web pages. 
     /// If 'all' show all files, else filter by type, e.g. 'png', 'html' etc.
     #[arg(short, long, help="Also list files of a particular type <all/png/..>")]
@@ -47,10 +51,21 @@ fn main() {
     let cli: CommandLineInterface = CommandLineInterface::parse();
     let domain_arg: String = if cli.url.starts_with("http") {cli.url.clone()} else {"http://".to_string() + &cli.url};
 
+    let user_login = match cli.user {
+        Some(l) => l,
+        None => "".to_string()
+    };
+    let login_components: Vec<&str> = if user_login.contains(":") {user_login.split(":").collect()} else {vec!["", ""]};
+
+    if login_components.len() != 2 {
+        panic!("Invalid argument for login, credentials must be in the form 'user_name:password'");
+    }
+
     let response: reqwest::blocking::Response = match reqwest::blocking::Client::new()
         .get(&domain_arg)
         .header("Accept", "application/json")
         .header("User-Agent", "Rust")
+        .basic_auth(login_components[0], Some(login_components[1]))
         .send() {
             Ok(val) => val,
             Err(_) => {
