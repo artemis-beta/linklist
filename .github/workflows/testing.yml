@@ -17,10 +17,11 @@ jobs:
     - name: Install stable toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
-        override: true
+        profile: minimal
+        toolchain: nightly
+        components: llvm-tools-preview
 
-    - name: Run cargo-tarpaulin
+    - name: Run Tests
       uses: Swatinem/fucov@v1
     - uses: codecov/codecov-action@v2
       with:
