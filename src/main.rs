@@ -14,8 +14,9 @@
 use reqwest;
 use clap::Parser;
 use colored::Colorize;
-use std::process;
+use std::{process, io::Write};
 use itertools::Itertools;
+use rpassword;
 
 mod parsing;
 
@@ -33,8 +34,12 @@ struct CommandLineInterface {
     path: bool,
 
     /// Provide server credentials
-    #[arg(short, long, help="Provide user argument to curl in form 'username:password'")]
-    user: Option<String>,
+    #[arg(short, long, help="Provide login credentials")]
+    login: bool,
+
+    /// Allow invalid certificates
+    #[arg(short, long, help="Allow invalid certificates")]
+    disable_ssl_verify: bool,
 
     /// Show file links in addition to web pages. 
     /// If 'all' show all files, else filter by type, e.g. 'png', 'html' etc.
@@ -51,25 +56,39 @@ fn main() {
     let cli: CommandLineInterface = CommandLineInterface::parse();
     let domain_arg: String = if cli.url.starts_with("http") {cli.url.clone()} else {"http://".to_string() + &cli.url};
 
-    let user_login = match cli.user {
-        Some(l) => l,
-        None => "".to_string()
-    };
-    let login_components: Vec<&str> = if user_login.contains(":") {user_login.split(":").collect()} else {vec!["", ""]};
+    let mut user_name = "".to_string();
+    let mut password = "".to_string();
 
-    if login_components.len() != 2 {
-        panic!("Invalid argument for login, credentials must be in the form 'user_name:password'");
+    if cli.login {
+        print!("Username:{}", " ");
+        std::io::stdout().flush().unwrap();
+        user_name = std::io::stdin().read_line(&mut user_name)
+            .expect("Failed to read username")
+            .to_string();
+        password = match rpassword::prompt_password("Password: ") {
+            Ok(o) => o,
+            Err(_) => panic!("Request for password failed")
+        };
     }
 
-    let response: reqwest::blocking::Response = match reqwest::blocking::Client::new()
+    let response: reqwest::blocking::Response = match reqwest::blocking::Client::builder()
+        .danger_accept_invalid_certs(cli.disable_ssl_verify)
+        .build()
+        .unwrap()
         .get(&domain_arg)
         .header("Accept", "application/json")
         .header("User-Agent", "Rust")
-        .basic_auth(login_components[0], Some(login_components[1]))
+        .basic_auth(user_name, Some(password))
         .send() {
             Ok(val) => val,
-            Err(_) => {
-                println!("{}{}{}", "Failed to retrieve site content for '".red().bold(), &domain_arg.red().bold(), "'".red().bold());
+            Err(e) => {
+                println!(
+                    "{}{}{}{}",
+                    "Failed to retrieve site content for '".red().bold(),
+                    &domain_arg.red().bold(),
+                    "': ".red().bold(),
+                    e.to_string().red().bold()
+                );
                 process::exit(1);
             }
         };
