@@ -179,7 +179,7 @@ mod test {
     #[test]
     fn test_parse_file_links() -> () {
         let dummy_domain = "http://127.0.0.1:5500".to_string();
-        assert_eq!(get_file_links(&load_html_file_as_str(), &dummy_domain), vec!["/a_linked_file.html", "file_link.html"]);
+        assert_eq!(get_file_links(&load_html_file_as_str(), &dummy_domain, &"html".to_string()), vec!["/a_linked_file.html", "file_link.html"]);
     }
 
     #[test]
