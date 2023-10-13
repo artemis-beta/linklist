@@ -45,7 +45,7 @@ pub fn get_base_url(url: &String) -> String {
 
 
 /// Parse the Web page HTML for file links
-pub fn get_file_links(page_content: &String, domain: &String) -> Vec<String> {
+pub fn get_file_links(page_content: &String, domain: &String, file_type: &String) -> Vec<String> {
     let mut links: Vec<String> = Vec::<String>::new();
 
     let re_href_file = match Regex::new(r#"href=["'](/*[\w\d_/\-]+\.\w+*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#) {
@@ -88,7 +88,18 @@ pub fn get_file_links(page_content: &String, domain: &String) -> Vec<String> {
         .collect::<Vec<_>>();
         links.append(&mut href_internal_abs);
         links.append(&mut href_internal_paths);
-    
+
+    if file_type != "all" {
+        let re_file_type = match Regex::new((file_type.to_owned() + "$").as_str()) {
+            Ok(val) => val,
+            Err(_) => {
+                println!("{}", "Internal Error: Failed to parse regex string".red());
+                process::exit(1);
+            }
+        };
+        links.retain(|link| re_file_type.captures(link).is_some());
+    }
+
     links
 }
 
@@ -168,7 +179,7 @@ mod test {
     #[test]
     fn test_parse_file_links() -> () {
         let dummy_domain = "http://127.0.0.1:5500".to_string();
-        assert_eq!(get_file_links(&load_html_file_as_str(), &dummy_domain), vec!["/a_linked_file.html", "file_link.html"]);
+        assert_eq!(get_file_links(&load_html_file_as_str(), &dummy_domain, &"html".to_string()), vec!["/a_linked_file.html", "file_link.html"]);
     }
 
     #[test]
