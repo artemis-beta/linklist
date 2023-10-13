@@ -126,7 +126,7 @@ fn main() {
     }
 
     if cli.file_type.is_some() {
-        let file_links: Vec<String> = parsing::get_file_links(&response_text, &domain_search);
+        let file_links: Vec<String> = parsing::get_file_links(&response_text, &domain_search, &cli.file_type.unwrap());
         links.extend(file_links);
     }
 
