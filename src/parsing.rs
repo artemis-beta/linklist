@@ -48,14 +48,14 @@ pub fn get_base_url(url: &String) -> String {
 pub fn get_file_links(page_content: &String, domain: &String, file_type: &String) -> Vec<String> {
     let mut links: Vec<String> = Vec::<String>::new();
 
-    let re_href_file = match Regex::new(r#"href=["'](/*[\w\d_/\-]+\.\w+*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#) {
+    let re_href_file = match Regex::new(r#"href\s*=\s*["'](/*[\w\d_/\-]+\.\w+*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#) {
         Ok(val) => val,
         Err(_) => {
             println!("{}", "Internal Error: Failed to parse regex string".red());
             process::exit(1);
         }
     };
-    let re_href_file_abs = match Regex::new((r#"href=["']"#.to_string() + domain + r#"(/*[\w\d_\-/]+\.\w+/*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#).as_str()) {
+    let re_href_file_abs = match Regex::new((r#"href\s*=\s*["']"#.to_string() + domain + r#"(/*[\w\d_\-/]+\.\w+/*)#*[\w\d_\-/]*\?*[\w\d_\-=&/]*["']"#).as_str()) {
         Ok(val) => val,
         Err(_) => {
             println!("{}", "Internal Error: Failed to parse regex string".red());
